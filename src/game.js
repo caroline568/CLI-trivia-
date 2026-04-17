@@ -6,12 +6,16 @@ const rl = readline.createInterface({
   output: process.stdout,
 });
 
-let score = 0;
 let currentQuestion = 0;
-let timerInterval;
-let secondsLeft;
+let score = 0;
+let userAnswers = [];
 
-// ASK QUESTION FUNCTION
+let timerInterval = null;
+let secondsLeft = 0;
+
+const TIME_PER_QUESTION = 15;
+let questionActive = false;
+// ask question
 function askQuestion() {
   if (currentQuestion >= questions.length) {
     endGame();
@@ -19,7 +23,9 @@ function askQuestion() {
   }
 
   const q = questions[currentQuestion];
-  secondsLeft = 15;
+
+  questionActive = true;
+  secondsLeft = TIME_PER_QUESTION;
 
   console.log("\n--------------------------------------------------");
   console.log(`Question ${currentQuestion + 1} of ${questions.length}`);
@@ -28,53 +34,90 @@ function askQuestion() {
 
   q.options.forEach(option => console.log(option));
 
+  // TIMER
   timerInterval = setInterval(() => {
     secondsLeft--;
 
+    process.stdout.write(`⏱ Time left: ${secondsLeft}s   \r`);
+
     if (secondsLeft <= 0) {
       clearInterval(timerInterval);
-      console.log("\n Time's up!");
+
+      if (!questionActive) return;
+      questionActive = false;
+
+      console.log("\n\n⏰ Time's up!");
       console.log(`Correct answer: ${q.answer}`);
+
+      userAnswers.push({
+        question: q.question,
+        correctAnswer: q.answer,
+        userAnswer: "No answer",
+        isCorrect: false
+      });
+
       currentQuestion++;
-      askQuestion();
+      setTimeout(askQuestion, 1000);
     }
   }, 1000);
 
+  // USER INPUT
   rl.question("\nYour answer (A/B/C/D): ", (input) => {
+    if (!questionActive) return;
+
+    questionActive = false;
     clearInterval(timerInterval);
 
     const userAnswer = input.trim().toUpperCase();
 
-    if (userAnswer === q.answer) {
-      console.log(" Correct!");
+    const isCorrect = userAnswer === q.answer;
+
+    if (isCorrect) {
+      console.log("✅ Correct!");
       score++;
     } else {
-      console.log(`X Incorrect. The correct answer was: ${q.answer}`);
+      console.log(`❌ Wrong. Correct answer: ${q.answer}`);
     }
 
+    userAnswers.push({
+      question: q.question,
+      correctAnswer: q.answer,
+      userAnswer: userAnswer,
+      isCorrect: isCorrect
+    });
+
     currentQuestion++;
-    askQuestion();
+    setTimeout(askQuestion, 800);
   });
 }
-
-// END GAME FUNCTION
+// end game
 function endGame() {
   clearInterval(timerInterval);
 
   console.log("\n==================================================");
-  console.log("           GAME OVER - Here are your results");
-  console.log("==================================================");
+  console.log("           GAME OVER - RESULTS");
+  console.log("==================================================\n");
 
-  const results = questions.map((q, index) => `Q${index + 1}: ${q.question}`);
-  results.forEach(line => console.log(line));
+  // SHOW FULL BREAKDOWN (FIXED)
+  userAnswers.forEach((item, index) => {
+    const status = item.isCorrect ? "✅" : "❌";
 
-  console.log(`\nFinal Score: ${score} out of ${questions.length}`);
+    console.log(`${status} Q${index + 1}: ${item.question}`);
+    console.log(`   Your answer   : ${item.userAnswer}`);
+    console.log(`   Correct answer: ${item.correctAnswer}`);
+    console.log("");
+  });
 
-  if (score === questions.length) {
+  console.log("--------------------------------------------------");
+  console.log(`Final Score: ${score} / ${questions.length}`);
+
+  const percentage = (score / questions.length) * 100;
+
+  if (percentage === 100) {
     console.log(" Perfect score!");
-  } else if (score >= 7) {
+  } else if (percentage >= 70) {
     console.log(" Great job!");
-  } else if (score >= 5) {
+  } else if (percentage >= 50) {
     console.log(" Keep practising!");
   } else {
     console.log(" Keep at it — you'll get there!");
@@ -82,8 +125,7 @@ function endGame() {
 
   rl.close();
 }
-
-// EXPORT GAME START FUNCTION
+// start game
 function startGame() {
   askQuestion();
 }
