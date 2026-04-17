@@ -1,10 +1,23 @@
+
 const readline = require("readline");
-const questions = require("./questions");
+const startGame = require("./game");
 
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
 });
+
+console.log("==================================================");
+console.log("   Welcome to the Software Engineering Fundamentals Quiz!");
+console.log("==================================================");
+console.log("Answer each question with A, B, C, or D.");
+console.log("You have 15 seconds per question. Good luck!\n");
+
+rl.question("Press ENTER to start...", () => {
+  startGame(rl); 
+});
+GAME.JS
+const questions = require("./questions");
 
 let currentQuestion = 0;
 let score = 0;
@@ -15,11 +28,19 @@ let secondsLeft = 0;
 
 const TIME_PER_QUESTION = 15;
 let questionActive = false;
-// ask question
-function askQuestion() {
+
+let gameStartTime = 0;
+
+// START GAME
+function startGame(rl) {
+  gameStartTime = Date.now();
+  askQuestion(rl);
+}
+
+// ASK QUESTION
+function askQuestion(rl) {
   if (currentQuestion >= questions.length) {
-    endGame();
-    return;
+    return endGame(rl);
   }
 
   const q = questions[currentQuestion];
@@ -29,24 +50,25 @@ function askQuestion() {
 
   console.log("\n--------------------------------------------------");
   console.log(`Question ${currentQuestion + 1} of ${questions.length}`);
-  console.log(`Time limit: ${secondsLeft} seconds`);
+  console.log(`⏱ You have ${secondsLeft} seconds`);
   console.log("\n" + q.question);
 
-  q.options.forEach(option => console.log(option));
+  //  Using map (required)
+  q.options.map(opt => console.log(opt));
 
   // TIMER
   timerInterval = setInterval(() => {
     secondsLeft--;
-
-    process.stdout.write(`⏱ Time left: ${secondsLeft}s   \r`);
+    process.stdout.write(`⏳ ${secondsLeft}s left   \r`);
 
     if (secondsLeft <= 0) {
       clearInterval(timerInterval);
 
       if (!questionActive) return;
+
       questionActive = false;
 
-      console.log("\n\n⏰ Time's up!");
+      console.log("\n⏰ Time's up!");
       console.log(`Correct answer: ${q.answer}`);
 
       userAnswers.push({
@@ -57,7 +79,7 @@ function askQuestion() {
       });
 
       currentQuestion++;
-      setTimeout(askQuestion, 1000);
+      setTimeout(() => askQuestion(rl), 1000);
     }
   }, 1000);
 
@@ -70,10 +92,16 @@ function askQuestion() {
 
     const userAnswer = input.trim().toUpperCase();
 
+    //  INPUT VALIDATION
+    if (!["A", "B", "C", "D"].includes(userAnswer)) {
+      console.log("⚠️ Invalid input. Please enter A, B, C, or D.");
+      return askQuestion(rl);
+    }
+
     const isCorrect = userAnswer === q.answer;
 
     if (isCorrect) {
-      console.log("✅ Correct!");
+      console.log(" Correct!");
       score++;
     } else {
       console.log(`❌ Wrong. Correct answer: ${q.answer}`);
@@ -82,52 +110,51 @@ function askQuestion() {
     userAnswers.push({
       question: q.question,
       correctAnswer: q.answer,
-      userAnswer: userAnswer,
-      isCorrect: isCorrect
+      userAnswer,
+      isCorrect
     });
 
     currentQuestion++;
-    setTimeout(askQuestion, 800);
+    setTimeout(() => askQuestion(rl), 800);
   });
 }
-// end game
-function endGame() {
+
+// END GAME
+function endGame(rl) {
   clearInterval(timerInterval);
 
+  const totalTime = Math.floor((Date.now() - gameStartTime) / 1000);
+
   console.log("\n==================================================");
-  console.log("           GAME OVER - RESULTS");
+  console.log("               GAME OVER");
   console.log("==================================================\n");
 
-  // SHOW FULL BREAKDOWN (FIXED)
+  //  Array iteration 
   userAnswers.forEach((item, index) => {
-    const status = item.isCorrect ? "✅" : "❌";
+    const status = item.isCorrect ? "✅" : "X";
 
     console.log(`${status} Q${index + 1}: ${item.question}`);
     console.log(`   Your answer   : ${item.userAnswer}`);
-    console.log(`   Correct answer: ${item.correctAnswer}`);
-    console.log("");
+    console.log(`   Correct answer: ${item.correctAnswer}\n`);
   });
 
   console.log("--------------------------------------------------");
   console.log(`Final Score: ${score} / ${questions.length}`);
+  console.log(`Total Time: ${totalTime} seconds`);
 
   const percentage = (score / questions.length) * 100;
 
   if (percentage === 100) {
-    console.log(" Perfect score!");
+    console.log("🏆 Perfect score!");
   } else if (percentage >= 70) {
     console.log(" Great job!");
   } else if (percentage >= 50) {
     console.log(" Keep practising!");
   } else {
-    console.log(" Keep at it — you'll get there!");
+    console.log(" Don't give up!");
   }
 
   rl.close();
-}
-// start game
-function startGame() {
-  askQuestion();
 }
 
 module.exports = startGame;
